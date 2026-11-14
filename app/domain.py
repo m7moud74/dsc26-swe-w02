@@ -1,5 +1,4 @@
-
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 
 
@@ -38,61 +37,32 @@ class Parcel:
 def apply_event(parcel: Parcel, event: EventType) -> Parcel:
     if parcel.state == ParcelState.CREATED:
         if event == EventType.DISPATCH:
-            return Parcel(
-                id=parcel.id,
-                merchant_ref=parcel.merchant_ref,
-                cod_amount_piastres=parcel.cod_amount_piastres,
-                address_text=parcel.address_text,
+            return replace(
+                parcel,
                 state=ParcelState.OUT_FOR_DELIVERY,
                 attempts=parcel.attempts + 1,
             )
 
     elif parcel.state == ParcelState.OUT_FOR_DELIVERY:
         if event == EventType.DELIVER:
-            return Parcel(
-                id=parcel.id,
-                merchant_ref=parcel.merchant_ref,
-                cod_amount_piastres=parcel.cod_amount_piastres,
-                address_text=parcel.address_text,
-                state=ParcelState.DELIVERED,
-                attempts=parcel.attempts,
-            )
+            return replace(parcel, state=ParcelState.DELIVERED)
 
         if event == EventType.FAIL:
-            return Parcel(
-                id=parcel.id,
-                merchant_ref=parcel.merchant_ref,
-                cod_amount_piastres=parcel.cod_amount_piastres,
-                address_text=parcel.address_text,
-                state=ParcelState.FAILED_ATTEMPT,
-                attempts=parcel.attempts,
-            )
+            return replace(parcel, state=ParcelState.FAILED_ATTEMPT)
 
     elif parcel.state == ParcelState.FAILED_ATTEMPT:
         if event == EventType.DISPATCH:
             if parcel.attempts >= MAX_ATTEMPTS:
-                raise InvalidTransition(
-                    "Maximum delivery attempts reached."
-                )
+                raise InvalidTransition("Maximum delivery attempts reached.")
 
-            return Parcel(
-                id=parcel.id,
-                merchant_ref=parcel.merchant_ref,
-                cod_amount_piastres=parcel.cod_amount_piastres,
-                address_text=parcel.address_text,
+            return replace(
+                parcel,
                 state=ParcelState.OUT_FOR_DELIVERY,
                 attempts=parcel.attempts + 1,
             )
 
         if event == EventType.RETURN:
-            return Parcel(
-                id=parcel.id,
-                merchant_ref=parcel.merchant_ref,
-                cod_amount_piastres=parcel.cod_amount_piastres,
-                address_text=parcel.address_text,
-                state=ParcelState.RETURNED,
-                attempts=parcel.attempts,
-            )
+            return replace(parcel, state=ParcelState.RETURNED)
 
     raise InvalidTransition(
         f"Event '{event}' is not allowed for state '{parcel.state}'."
